@@ -87,7 +87,6 @@ int main(int argc, char *argv[])
 
     QString config = "";
     server.filter.dumpConfig(config);
-    server.startConnectDbusDaemon(daemonPath);
     server.startListenBoxClient(socketPath);
     return app.exec();
 }

@@ -38,6 +38,9 @@ target_link_libraries(ll-dbus-proxy
 
 target_include_directories(ll-dbus-proxy PRIVATE ${DBUS_INCLUDE_DIRS})
 
+install(FILES resource/dbus_proxy_config
+        DESTINATION /deepin/linglong/config)
+
 #设置生成目标二进制的路径
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 install(TARGETS ll-dbus-proxy RUNTIME DESTINATION bin)

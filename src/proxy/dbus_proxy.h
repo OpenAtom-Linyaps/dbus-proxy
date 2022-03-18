@@ -42,18 +42,12 @@ public:
     /*
      * 连接dbus-daemon
      *
+     * @param localProxy: 请求与dbus-daemon连接的客户端
      * @param daemonPath: dbus-daemon地址
      *
      * @return bool: true:成功 其它:失败
      */
-    bool startConnectDbusDaemon(const QString &daemonPath);
-
-    /*
-     * 保存socket监听地址
-     *
-     * @param path: socket监听地址
-     */
-    // void saveBoxSocketPath(const QString &path) { socketPath = path; }
+    bool startConnectDbusDaemon(QLocalSocket *localProxy, const QString &daemonPath);
 
     /*
      * 保存dbus-dameon连接地址
@@ -114,6 +108,16 @@ private:
     QByteArray createFakeReplyMsg(const QByteArray &byteMsg, quint32 serial, const QString &dst,
                                   const QString &errorName, const QString &errorMsg);
 
+    /*
+     * 将应用访问的dbus信息发送到服务端
+     *
+     * @param appId: 应用的appId
+     * @param name: dbus 对象名字
+     * @param path: dbus 对象路径
+     * @param interface: dbus 对象接口
+     */
+    void sendDataToServer(const QString &appId, const QString &name, const QString &path, const QString &interface);
+
 public:
     DbusFilter filter;
 
@@ -130,21 +134,16 @@ private slots:
 
 private:
     // dbus-proxy server, wait for dbus client in box to connect
-    // QLocalServer *serverProxy;
     QScopedPointer<QLocalServer> serverProxy;
-    // dbus client, be used to connect to the dbus daemon
-    // QLocalSocket *clientProxy;
-    QScopedPointer<QLocalSocket> clientProxy;
 
+    // boxclient & proxy client map
+    QMap<QLocalSocket *, QLocalSocket *> relations;
+    // proxy client connect status map
+    QMap<QLocalSocket *, bool> connStatus;
 
-    QLocalSocket *boxClient;
-
-    bool isConnectDbusDaemon;
     // 客户端地址
     QString boxClientAddr;
 
-    // socket 地址
-    // QString socketPath;
     // dbus-daemon path
     QString daemonPath;
 
