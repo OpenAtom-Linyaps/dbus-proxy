@@ -18,6 +18,7 @@
 #include <QLocalServer>
 #include <QObject>
 #include <QScopedPointer>
+#include <QThread>
 
 #include "filter/dbus_filter.h"
 #include "message/dbus_message.h"

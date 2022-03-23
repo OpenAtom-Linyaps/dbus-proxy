@@ -3,8 +3,6 @@ enable_testing()
 
 find_package(GTest REQUIRED)
 
-# include_directories(${DBUS_INCLUDE_DIRS})
-
 set(LINK_LIBS
     GTest::GTest
     GTest::Main
@@ -19,15 +17,16 @@ aux_source_directory(${PROJECT_SOURCE_DIR}/src/proxy PROXY_SRC)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/message MSG_SRC)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/filter FILTER_SRC)
 
+aux_source_directory(${PROJECT_SOURCE_DIR}/src/post_request POST_SRC)
+
 set(GTEST_SOURCES
         dbus_filter_test.cpp
         dbus_message_test.cpp
         ${PROXY_SRC}
         ${FILTER_SRC}
         ${MSG_SRC}
+        ${POST_SRC}
         )
-
-# CMake　相对路径
 
 add_executable(dbus-proxy-test ${GTEST_SOURCES})
 

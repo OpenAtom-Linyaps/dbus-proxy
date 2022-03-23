@@ -1,23 +1,18 @@
-# find_package(Qt5 REQUIRED COMPONENTS Core DBus Network)
 # add dtk log
 find_package(DtkCore REQUIRED)
-# find_package(PkgConfig REQUIRED)
-# libdbus-1-dev 添加dbus api支持
-# pkg_search_module(DBUS REQUIRED dbus-1)
 
 aux_source_directory(proxy PROXY_SRC)
 aux_source_directory(message MSG_SRC)
 aux_source_directory(filter FILTER_SRC)
 
-# libpolkit-qt5-1-dev libpolkit-agent-1-dev
-# find_package(PolkitQt5-1)
-# include_directories(${DBUS_INCLUDE_DIRS})
+aux_source_directory(${PROJECT_SOURCE_DIR}/src/post_request POST_SRC)
 
 set(MAIN_SOURCES
         main.cpp
         ${PROXY_SRC}
         ${FILTER_SRC}
         ${MSG_SRC}
+        ${POST_SRC}
         )
 
 set(LINK_LIBS
@@ -27,7 +22,6 @@ set(LINK_LIBS
     Qt5::DBus
     dtkcore
     ${DBUS_LIBRARIES}
-    # PolkitQt5-1::Agent
     )
 
 add_executable(ll-dbus-proxy

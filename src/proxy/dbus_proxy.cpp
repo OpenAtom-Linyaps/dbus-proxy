@@ -16,16 +16,7 @@
 #include <QDBusInterface>
 #include <QDBusReply>
 
-#include <QEventLoop>
-#include <QJsonObject>
-#include <QJsonDocument>
-#include <QTimer>
-#include <QtNetwork/QNetworkAccessManager>
-#include <QtNetwork/QNetworkRequest>
-#include <QtNetwork/QNetworkReply>
-
-// 存储dbus信息服务器配置文件
-const QString serverConfigPath = "/deepin/linglong/config/dbus_proxy_config";
+#include "post_request/post_thread.h"
 
 DbusProxy::DbusProxy()
     : serverProxy(new QLocalServer())
@@ -59,44 +50,13 @@ DbusProxy::~DbusProxy()
 void DbusProxy::sendDataToServer(const QString &appId, const QString &name, const QString &path,
                                  const QString &interface)
 {
-    if (name.isEmpty() && path.isEmpty() && interface.isEmpty()) {
-        return;
-    }
-
-    QFile dbFile(serverConfigPath);
-    auto ret = dbFile.open(QIODevice::ReadOnly);
-    if (!ret) {
-        qWarning() << "open config file err";
-        return;
-    }
-    QString qValue = dbFile.readAll();
-    dbFile.close();
-    QJsonParseError parseJsonErr;
-    QJsonDocument document = QJsonDocument::fromJson(qValue.toUtf8(), &parseJsonErr);
-    if (QJsonParseError::NoError != parseJsonErr.error) {
-        qWarning() << "parse config file err";
-        return;
-    }
-    QJsonObject dataObject = document.object();
-    if (!dataObject.contains("dbusDbUrl")) {
-        qWarning() << "dbusDbUrl not found in config";
-        return;
-    }
-    const QString configValue = dataObject["dbusDbUrl"].toString();
-    QNetworkAccessManager mgr;
-    const QUrl url(configValue + "/apps/adddbusproxy");
-    QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-    QJsonObject obj;
-    obj["appId"] = appId;
-    obj["name"] = name;
-    obj["path"] = path;
-    obj["interface"] = interface;
-    QJsonDocument doc(obj);
-    QByteArray data = doc.toJson();
-    mgr.post(request, data);
-    qInfo().noquote() << "send data to test server:";
-    qInfo().noquote() << data;
+    QThread *thread = new QThread();
+    PostThread *worker = new PostThread(appId, name, path, interface);
+    worker->moveToThread(thread);
+    QObject::connect(thread, SIGNAL(started()), worker, SLOT(sendDataToServer()));
+    QObject::connect(thread, &QThread::finished, worker, &QObject::deleteLater);
+    QObject::connect(thread, &QThread::finished, thread, &QObject::deleteLater);
+    thread->start();
 }
 
 /*
