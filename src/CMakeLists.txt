@@ -1,6 +1,3 @@
-# add dtk log
-find_package(DtkCore REQUIRED)
-
 aux_source_directory(proxy PROXY_SRC)
 aux_source_directory(message MSG_SRC)
 aux_source_directory(filter FILTER_SRC)
@@ -20,7 +17,6 @@ set(LINK_LIBS
     Qt5::Core
     Qt5::Network
     Qt5::DBus
-    dtkcore
     ${DBUS_LIBRARIES}
     )
 

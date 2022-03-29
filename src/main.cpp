@@ -13,7 +13,6 @@
 #include <unistd.h>
 #include <dbus/dbus.h>
 
-#include <DLog>
 #include <QCoreApplication>
 #include <QDebug>
 
@@ -24,9 +23,9 @@ int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
 
-    // add for dtk log
-    Dtk::Core::DLogManager::registerConsoleAppender();
-    Dtk::Core::DLogManager::registerFileAppender();
+    qSetMessagePattern(
+        "%{time yyyy-MM-dd hh:mm:ss.zzz} [%{type}] [Line:%{line} Function:%{function}] %{message}");
+
     if (argc < 7) {
         qCritical() << "dbus proxy param err";
         return -1;
