@@ -23,12 +23,13 @@
 const QString serverConfigPath = "/deepin/linglong/config/dbus_proxy_config";
 
 PostThread::PostThread(const QString &id, const QString &busName, const QString &busPath, const QString &busPathIfce,
-                       QObject *parent)
+                       QThread *pThread, QObject *parent)
     : QObject(parent)
     , appId(id)
     , name(busName)
     , path(busPath)
     , interface(busPathIfce)
+    , thread(pThread)
 {
 }
 
@@ -38,6 +39,7 @@ PostThread::PostThread(const QString &id, const QString &busName, const QString 
 void PostThread::sendDataToServer()
 {
     if (name.isEmpty() && path.isEmpty() && interface.isEmpty()) {
+        emit finishPost(thread, this);
         return;
     }
 
@@ -45,6 +47,7 @@ void PostThread::sendDataToServer()
     auto ret = dbFile.open(QIODevice::ReadOnly);
     if (!ret) {
         qWarning() << "open config file err";
+        emit finishPost(thread, this);
         return;
     }
     QString qValue = dbFile.readAll();
@@ -53,11 +56,13 @@ void PostThread::sendDataToServer()
     QJsonDocument document = QJsonDocument::fromJson(qValue.toUtf8(), &parseJsonErr);
     if (QJsonParseError::NoError != parseJsonErr.error) {
         qWarning() << "parse config file err";
+        emit finishPost(thread, this);
         return;
     }
     QJsonObject dataObject = document.object();
     if (!dataObject.contains("dbusDbUrl")) {
         qWarning() << "dbusDbUrl not found in config";
+        emit finishPost(thread, this);
         return;
     }
     const QString configValue = dataObject["dbusDbUrl"].toString();
@@ -72,14 +77,14 @@ void PostThread::sendDataToServer()
     QJsonDocument doc(obj);
     QByteArray data = doc.toJson();
     QNetworkAccessManager mgr;
-    qInfo().noquote() << "begin to send data to test server:" + url.toString();
+    qInfo() << "begin to send data to test server:" + url.toString();
     QNetworkReply *reply = mgr.post(request, data);
     QString responseData;
     QEventLoop eventLoop;
     QObject::connect(reply, &QNetworkReply::finished, &eventLoop, [&]() {
         if (reply->error() == QNetworkReply::NoError) {
             responseData = QString::fromUtf8(reply->readAll());
-            qInfo().noquote() << "receive data from server:" << responseData;
+            qInfo() << "receive data from server:" << responseData;
         } else {
             QString err = reply->errorString();
             qCritical() << err;
@@ -90,6 +95,7 @@ void PostThread::sendDataToServer()
     // 1s 超时
     QTimer::singleShot(1000, &eventLoop, &QEventLoop::quit);
     eventLoop.exec();
-    qInfo().noquote() << "send data to test server:";
+    qInfo() << "send data to test server:";
     qInfo().noquote() << data;
+    emit finishPost(thread, this);
 }

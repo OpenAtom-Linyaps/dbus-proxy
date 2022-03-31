@@ -20,12 +20,16 @@ class PostThread : public QObject
 public slots:
     void sendDataToServer();
 
+signals:
+    void finishPost(QThread *thread, PostThread *worker);
+
 public:
-    PostThread(const QString &id, const QString &busName, const QString &busPath, const QString &busPathIfce, QObject *parent = 0);
+    PostThread(const QString &id, const QString &busName, const QString &busPath, const QString &busPathIfce, QThread *pThread, QObject *parent = 0);
 
 private:
     QString appId;
     QString name;
     QString path;
     QString interface;
+    QThread *thread;
 };

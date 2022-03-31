@@ -15,8 +15,7 @@
 #include <QDBusConnection>
 #include <QDBusInterface>
 #include <QDBusReply>
-
-#include "post_request/post_thread.h"
+#include <QFileInfo>
 
 DbusProxy::DbusProxy()
     : serverProxy(new QLocalServer())
@@ -39,6 +38,20 @@ DbusProxy::~DbusProxy()
     }
 }
 
+void DbusProxy::releaseRes(QThread *thread, PostThread *worker)
+{
+    qInfo() << "releaseRes thread:" << thread << ", worker:" << worker;
+    if (thread) {
+        thread->quit();
+        thread->wait(500);
+        delete thread;
+    }
+
+    if (worker) {
+        delete worker;
+    }
+}
+
 /*
  * 将应用访问的dbus信息发送到服务端
  *
@@ -50,12 +63,17 @@ DbusProxy::~DbusProxy()
 void DbusProxy::sendDataToServer(const QString &appId, const QString &name, const QString &path,
                                  const QString &interface)
 {
+    QFileInfo fs("/deepin/linglong/config/dbus_proxy_config");
+    if (!fs.exists() && !fs.isFile()) {
+        qInfo() << "dbus_proxy_config not exist, report dbus data end";
+        return;
+    }
+
     QThread *thread = new QThread();
-    PostThread *worker = new PostThread(appId, name, path, interface);
+    PostThread *worker = new PostThread(appId, name, path, interface, thread);
     worker->moveToThread(thread);
     QObject::connect(thread, SIGNAL(started()), worker, SLOT(sendDataToServer()));
-    QObject::connect(thread, &QThread::finished, worker, &QObject::deleteLater);
-    QObject::connect(thread, &QThread::finished, thread, &QObject::deleteLater);
+    QObject::connect(worker, SIGNAL(finishPost(QThread *, PostThread *)), this, SLOT(releaseRes(QThread *, PostThread *)));
     thread->start();
 }
 
@@ -123,7 +141,6 @@ void DbusProxy::onNewConnection()
     relations.insert(client, proxyClient);
     qInfo() << "onNewConnection create: " << client << "<===>" << proxyClient << " relation, ret:" << ret;
 }
-
 
 int requestPermission(const QString &appId)
 {

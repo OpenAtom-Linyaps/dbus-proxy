@@ -23,6 +23,8 @@
 #include "filter/dbus_filter.h"
 #include "message/dbus_message.h"
 
+#include "post_request/post_thread.h"
+
 class DbusProxy : public QObject
 {
     Q_OBJECT
@@ -132,6 +134,8 @@ private slots:
     void onConnectedServer();
     void onReadyReadServer();
     void onDisconnectedServer();
+
+    void releaseRes(QThread *thread, PostThread *worker);
 
 private:
     // dbus-proxy server, wait for dbus client in box to connect
