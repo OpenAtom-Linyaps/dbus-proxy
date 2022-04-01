@@ -23,8 +23,7 @@ int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
 
-    qSetMessagePattern(
-        "%{time yyyy-MM-dd hh:mm:ss.zzz} [%{type}] [Line:%{line} Function:%{function}] %{message}");
+    qSetMessagePattern("%{time yyyy-MM-dd hh:mm:ss.zzz} [%{appname}] [%{type}] %{message}");
 
     if (argc < 7) {
         qCritical() << "dbus proxy param err";
