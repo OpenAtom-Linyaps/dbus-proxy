@@ -1,3 +1,10 @@
+linglong-dbus-proxy (1.0.3-1) unstable; urgency=medium
+
+  * fix post_thread eventfd lost
+  * add qlog tag
+
+ -- huqinghong <huqinghong@uniontech.com>  Thu, 07 Apr 2022 09:39:11 +0800
+
 linglong-dbus-proxy (1.0.2-1) unstable; urgency=medium
 
   * remove dtk

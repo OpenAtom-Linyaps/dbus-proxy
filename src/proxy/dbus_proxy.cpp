@@ -40,7 +40,7 @@ DbusProxy::~DbusProxy()
 
 void DbusProxy::releaseRes(QThread *thread, PostThread *worker)
 {
-    qInfo() << "releaseRes thread:" << thread << ", worker:" << worker;
+    qDebug() << "releaseRes thread:" << thread << ", worker:" << worker;
     if (thread) {
         thread->quit();
         thread->wait(500);
@@ -166,7 +166,7 @@ void DbusProxy::onReadyReadClient()
     if (boxClient) {
         QByteArray data = boxClient->readAll();
         qInfo() << "Read Data From Client size:" << data.size();
-        qInfo() << "Read Data From Client:" << data;
+        qDebug() << "Read Data From Client:" << data;
         QByteArray helloData;
         bool isHelloMsg = data.contains("BEGIN");
         if (isHelloMsg) {
@@ -273,7 +273,7 @@ void DbusProxy::onReadyReadServer()
     QLocalSocket *daemonClient = static_cast<QLocalSocket *>(QObject::sender());
     QByteArray receiveDta = daemonClient->readAll();
     qInfo() << "receive from dbus-daemon, data size:" << receiveDta.size();
-    qInfo() << receiveDta;
+    qDebug() << receiveDta;
     // is a right way to judge?
     bool isHelloReply = receiveDta.contains("NameAcquired");
     if (isHelloReply) {

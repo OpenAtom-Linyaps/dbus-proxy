@@ -84,7 +84,7 @@ void PostThread::sendDataToServer()
     QObject::connect(reply, &QNetworkReply::finished, &eventLoop, [&]() {
         if (reply->error() == QNetworkReply::NoError) {
             responseData = QString::fromUtf8(reply->readAll());
-            qInfo() << "receive data from server:" << responseData;
+            qDebug() << "receive data from server:" << responseData;
         } else {
             QString err = reply->errorString();
             qCritical() << err;
