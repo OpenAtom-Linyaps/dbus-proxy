@@ -77,7 +77,7 @@ void PostThread::sendDataToServer()
     QJsonDocument doc(obj);
     QByteArray data = doc.toJson();
     QNetworkAccessManager mgr;
-    qInfo() << "begin to send data to test server:" + url.toString();
+    qDebug() << "begin to send data to test server:" + url.toString();
     QNetworkReply *reply = mgr.post(request, data);
     QString responseData;
     QEventLoop eventLoop;
@@ -95,7 +95,7 @@ void PostThread::sendDataToServer()
     // 1s 超时
     QTimer::singleShot(1000, &eventLoop, &QEventLoop::quit);
     eventLoop.exec();
-    qInfo() << "send data to test server:";
-    qInfo().noquote() << data;
+    qDebug() << "send data to test server:";
+    qDebug().noquote() << data;
     emit finishPost(thread, this);
 }

@@ -65,7 +65,7 @@ void DbusProxy::sendDataToServer(const QString &appId, const QString &name, cons
 {
     QFileInfo fs("/deepin/linglong/config/dbus_proxy_config");
     if (!fs.exists() && !fs.isFile()) {
-        qInfo() << "dbus_proxy_config not exist, report dbus data end";
+        qDebug() << "dbus_proxy_config not exist, report dbus data end";
         return;
     }
 
@@ -119,7 +119,7 @@ bool DbusProxy::startConnectDbusDaemon(QLocalSocket *localProxy, const QString &
     connect(localProxy, SIGNAL(connected()), this, SLOT(onConnectedServer()));
     connect(localProxy, SIGNAL(disconnected()), this, SLOT(onDisconnectedServer()));
     connect(localProxy, SIGNAL(readyRead()), this, SLOT(onReadyReadServer()));
-    qInfo() << "proxy client:" << localProxy << " start connect dbus-daemon...";
+    qDebug() << "proxy client:" << localProxy << " start connect dbus-daemon...";
     localProxy->connectToServer(daemonPath);
     // 等待3s
     if (!localProxy->waitForConnected(3000)) {
@@ -132,14 +132,14 @@ bool DbusProxy::startConnectDbusDaemon(QLocalSocket *localProxy, const QString &
 void DbusProxy::onNewConnection()
 {
     QLocalSocket *client = serverProxy->nextPendingConnection();
-    qInfo() << "onNewConnection called, client:" << client;
+    qDebug() << "onNewConnection called, client:" << client;
     connect(client, SIGNAL(readyRead()), this, SLOT(onReadyReadClient()));
     connect(client, SIGNAL(disconnected()), this, SLOT(onDisconnectedClient()));
 
     QLocalSocket *proxyClient = new QLocalSocket();
     bool ret = startConnectDbusDaemon(proxyClient, daemonPath);
     relations.insert(client, proxyClient);
-    qInfo() << "onNewConnection create: " << client << "<===>" << proxyClient << " relation, ret:" << ret;
+    qDebug() << "onNewConnection create: " << client << "<===>" << proxyClient << " relation, ret:" << ret;
 }
 
 int requestPermission(const QString &appId)
@@ -162,10 +162,10 @@ void DbusProxy::onReadyReadClient()
 {
     // box client socket address
     QLocalSocket *boxClient = static_cast<QLocalSocket *>(sender());
-    qInfo() << "onReadyReadClient called, boxClient:" << boxClient;
+    qDebug() << "onReadyReadClient called, boxClient:" << boxClient;
     if (boxClient) {
         QByteArray data = boxClient->readAll();
-        qInfo() << "Read Data From Client size:" << data.size();
+        qDebug() << "Read Data From Client size:" << data.size();
         qDebug() << "Read Data From Client:" << data;
         QByteArray helloData;
         bool isHelloMsg = data.contains("BEGIN");
@@ -195,12 +195,12 @@ void DbusProxy::onReadyReadClient()
         // 代理未连接上dbus daemon，尝试重新连接dbus daemon一次
         if (!proxyClient && !connStatus.contains(proxyClient)) {
             ret = startConnectDbusDaemon(proxyClient, daemonPath);
-            qInfo() << proxyClient << " start reconnect dbus-daemon ret:" << ret;
+            qDebug() << proxyClient << " start reconnect dbus-daemon ret:" << ret;
         }
 
         // 判断是否满足过滤规则
         bool isMatch = filter.isMessageMatch(header.destination, header.path, header.interface);
-        qInfo() << "msg destination:" << header.destination << ", header.path:" << header.path
+        qDebug() << "msg destination:" << header.destination << ", header.path:" << header.path
                 << ", header.interface:" << header.interface << ", header.member:" << header.member
                 << ", dbus msg match filter ret:" << isMatch;
         if (!isDbusAuthMsg(data)) {
@@ -238,7 +238,7 @@ void DbusProxy::onReadyReadClient()
         // 查找对应的 dbus 代理转发
         proxyClient->write(data);
         proxyClient->waitForBytesWritten(3000);
-        qInfo() << proxyClient << " send data to dbus-daemon done";
+        qDebug() << proxyClient << " send data to dbus-daemon done";
     }
 }
 
@@ -248,7 +248,7 @@ void DbusProxy::onDisconnectedClient()
     if (sender) {
         sender->disconnectFromServer();
     }
-    qInfo() << "onDisconnectedClient called, sender:" << sender;
+    qDebug() << "onDisconnectedClient called, sender:" << sender;
     QLocalSocket *proxyClient = relations[sender];
     // box 客户端断开连接时，断开代理与dbus daemon的连接
     if (!proxyClient) {
@@ -264,7 +264,7 @@ void DbusProxy::onDisconnectedClient()
 void DbusProxy::onConnectedServer()
 {
     QLocalSocket *proxyClient = static_cast<QLocalSocket *>(QObject::sender());
-    qInfo() << proxyClient << " connected to dbus-daemon success";
+    qDebug() << proxyClient << " connected to dbus-daemon success";
     connStatus.insert(proxyClient, true);
 }
 
@@ -272,19 +272,19 @@ void DbusProxy::onReadyReadServer()
 {
     QLocalSocket *daemonClient = static_cast<QLocalSocket *>(QObject::sender());
     QByteArray receiveDta = daemonClient->readAll();
-    qInfo() << "receive from dbus-daemon, data size:" << receiveDta.size();
+    qDebug() << "receive from dbus-daemon, data size:" << receiveDta.size();
     qDebug() << receiveDta;
     // is a right way to judge?
     bool isHelloReply = receiveDta.contains("NameAcquired");
     if (isHelloReply) {
-        qInfo() << "parse msg header from dbus-daemon";
+        qDebug() << "parse msg header from dbus-daemon";
         Header header;
         bool ret = parseHeader(receiveDta, &header);
         if (!ret) {
             qCritical() << "dbus-daemon msg parseHeader err";
         }
         boxClientAddr = header.destination;
-        qInfo() << "boxClientAddr:" << boxClientAddr;
+        qDebug() << "boxClientAddr:" << boxClientAddr;
     }
 
     // 查找代理对应的客户端
@@ -299,7 +299,7 @@ void DbusProxy::onReadyReadServer()
     if (boxClient) {
         boxClient->write(receiveDta);
         boxClient->waitForBytesWritten(3000);
-        qInfo() << boxClient << " send data to box dbus client done, data size:" << receiveDta.size();
+        qDebug() << boxClient << " send data to box dbus client done, data size:" << receiveDta.size();
     } else {
         qCritical() << daemonClient << " related boxClient not found";
     }
@@ -330,7 +330,7 @@ void DbusProxy::onDisconnectedServer()
     if (connStatus.contains(sender)) {
         connStatus.remove(sender);
     }
-    qInfo() << "onDisconnectedServer called sender:" << sender;
+    qDebug() << "onDisconnectedServer called sender:" << sender;
 }
 
 QByteArray DbusProxy::createFakeReplyMsg(const QByteArray &byteMsg, quint32 serial, const QString &dst,
