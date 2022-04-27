@@ -1,3 +1,9 @@
+linglong-dbus-proxy (1.0.6-1) unstable; urgency=medium
+
+  * decrease log of dbus-proxy
+
+ -- huqinghong <huqinghong@uniontech.com>  Wed, 27 Apr 2022 16:28:25 +0800
+
 linglong-dbus-proxy (1.0.5-1) unstable; urgency=medium
 
   * update version.
