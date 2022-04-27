@@ -97,7 +97,7 @@ bool DbusProxy::startListenBoxClient(const QString &socketPath)
         qCritical() << "listen box dbus client error";
         return false;
     }
-    qInfo() << "startListenBoxClient ret:" << ret;
+    qDebug() << "startListenBoxClient ret:" << ret;
     return ret;
 }
 
@@ -154,7 +154,7 @@ int requestPermission(const QString &appId)
     if (reply.isValid()) {
         ret = reply.value();
     }
-    qInfo() << "requestPermission ret:" << ret;
+    qDebug() << "requestPermission ret:" << ret;
     return ret;
 }
 
@@ -171,7 +171,7 @@ void DbusProxy::onReadyReadClient()
         bool isHelloMsg = data.contains("BEGIN");
         if (isHelloMsg) {
             // auth begin msg is not normal header
-            qWarning() << "get client hello msg";
+            qDebug() << "get client hello msg";
             helloData = data.mid(7);
         }
 
@@ -183,7 +183,7 @@ void DbusProxy::onReadyReadClient()
             ret = parseHeader(data, &header);
         }
         if (!ret) {
-            qWarning() << "parseHeader is not a normal msg";
+            qDebug() << "parseHeader is not a normal msg";
         }
 
         QLocalSocket *proxyClient = nullptr;
@@ -225,8 +225,8 @@ void DbusProxy::onReadyReadClient()
                     // 生成一个惟一的序列号
                     boxClient->write(reply);
                     boxClient->waitForBytesWritten(3000);
-                    qInfo() << "reply size:" << reply.size();
-                    qInfo() << reply;
+                    qDebug() << "reply size:" << reply.size();
+                    qDebug() << reply;
                 }
                 return;
             }

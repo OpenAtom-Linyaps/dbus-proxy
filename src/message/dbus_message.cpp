@@ -189,7 +189,7 @@ bool parseHeader(const QByteArray &buffer, Header *header)
     auto serialArray = buffer.mid(8, 4);
     header->serial = byteAraryToInt(serialArray, header->bigEndian);
     // add by hqh debug
-    qInfo() << QString("parse_header msg header type:%1,flags:%2,length:%3,serial:%4")
+    qDebug() << QString("parse_header msg header type:%1,flags:%2,length:%3,serial:%4")
                    .arg(header->type)
                    .arg(header->flags)
                    .arg(header->length)
@@ -329,7 +329,7 @@ bool parseHeader(const QByteArray &buffer, Header *header)
             return false;
         }
     }
-    qInfo() << QString(
+    qDebug() << QString(
                    "parseHeader path:%1, interface:%2, member:%3, destination:%4, hasReplySerial:%5, replySerial:%6")
                    .arg(header->path)
                    .arg(header->interface)
