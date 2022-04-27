@@ -61,7 +61,7 @@ void PostThread::sendDataToServer()
     }
     QJsonObject dataObject = document.object();
     if (!dataObject.contains("dbusDbUrl")) {
-        qWarning() << "dbusDbUrl not found in config";
+        qDebug() << "dbusDbUrl not found in config";
         emit finishPost(thread, this);
         return;
     }
