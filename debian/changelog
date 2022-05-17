@@ -1,3 +1,9 @@
+linglong-dbus-proxy (1.0.7-1) unstable; urgency=medium
+
+  * fix read dbus msg in buffer
+
+ -- huqinghong <huqinghong@uniontech.com>  Tue, 17 May 2022 14:35:03 +0800
+
 linglong-dbus-proxy (1.0.6-1) unstable; urgency=medium
 
   * decrease log of dbus-proxy
