@@ -155,7 +155,6 @@ bool parseHeader(const QByteArray &buffer, Header *header)
     quint32 offset = 0;
     quint32 endOffset = 0;
     quint8 headerType = 0;
-    const char *signature;
 
     if (buffer.size() < 16) {
         return false;
@@ -190,10 +189,10 @@ bool parseHeader(const QByteArray &buffer, Header *header)
     header->serial = byteAraryToInt(serialArray, header->bigEndian);
     // add by hqh debug
     qDebug() << QString("parse_header msg header type:%1,flags:%2,length:%3,serial:%4")
-                   .arg(header->type)
-                   .arg(header->flags)
-                   .arg(header->length)
-                   .arg(header->serial);
+                    .arg(header->type)
+                    .arg(header->flags)
+                    .arg(header->length)
+                    .arg(header->serial);
     if (header->serial == 0) {
         return false;
     }
@@ -222,7 +221,7 @@ bool parseHeader(const QByteArray &buffer, Header *header)
             return false;
         }
 
-        signature = getSignature(buffer, &offset, endOffset);
+        const char *signature = getSignature(buffer, &offset, endOffset);
         if (signature == NULL) {
             return false;
         }
@@ -329,14 +328,16 @@ bool parseHeader(const QByteArray &buffer, Header *header)
             return false;
         }
     }
-    qDebug() << QString(
-                   "parseHeader path:%1, interface:%2, member:%3, destination:%4, hasReplySerial:%5, replySerial:%6")
-                   .arg(header->path)
-                   .arg(header->interface)
-                   .arg(header->member)
-                   .arg(header->destination)
-                   .arg(header->hasReplySerial)
-                   .arg(header->replySerial);
+    qDebug()
+        << QString(
+               "parseHeader msg serial:%1, reply_serial:%2, hasReplySerial:%3, destination:%4, path:%5, interface:%6, member:%7")
+               .arg(header->serial)
+               .arg(header->replySerial)
+               .arg(header->hasReplySerial)
+               .arg(header->destination)
+               .arg(header->path)
+               .arg(header->interface)
+               .arg(header->member);
 
     switch (header->type) {
     case (int)MessageType::METHOD_CALL:
@@ -371,4 +372,112 @@ bool parseHeader(const QByteArray &buffer, Header *header)
         return false;
     }
     return true;
+}
+
+/*
+ * 从报文中解析dbus消息报文头
+ *
+ * @param byteArray: 报文字节数组
+ * @param header: dbus消息报文头
+ *
+ * @return bool: true:解析成功 false:失败
+ */
+bool parseDBusMsg(const QByteArray &byteArray, Header *header)
+{
+    DBusError dbErr;
+    dbus_error_init(&dbErr);
+
+    // invalid type cannot be marshaled
+    // msg: "l\x00\x00\x1C\x00\x00\x00org.fcitx.Fcitx.InputContext\x00" , msg size: 36
+    if (byteArray[1] == 0) {
+        return false;
+    }
+    DBusMessage *receiveMsg = dbus_message_demarshal(byteArray.constData(), byteArray.size(), &dbErr);
+    if (!receiveMsg) {
+        qCritical() << "dbus_message_demarshal failed";
+        if (dbus_error_is_set(&dbErr)) {
+            qCritical() << "dbus_message_demarshal err info:" << dbErr.message << ", dbus msg:" << byteArray
+                        << ", size:" << byteArray.size();
+            dbus_error_free(&dbErr);
+        }
+        return false;
+    } else {
+        header->destination = QString(QLatin1String(dbus_message_get_destination(receiveMsg)));
+        header->path = QString(QLatin1String(dbus_message_get_path(receiveMsg)));
+        header->interface = QString(QLatin1String(dbus_message_get_interface(receiveMsg)));
+        header->member = QString(QLatin1String(dbus_message_get_member(receiveMsg)));
+        header->serial = dbus_message_get_serial(receiveMsg);
+        header->replySerial = dbus_message_get_reply_serial(receiveMsg);
+        header->hasReplySerial = header->replySerial > 0 ? true : false;
+        header->sender = QString(QLatin1String(dbus_message_get_sender(receiveMsg)));
+        header->type = dbus_message_get_type(receiveMsg);
+        header->flags = byteArray[2];
+        // 需要获取消息flags 判断消息sender是否需要回复
+        // dbus_message_get_no_reply()
+        // qDebug() << "dbus msg serial:" << header->serial << ", reply_serial:" << header->replySerial
+        //         << ", sender:" << header->sender << ", destination:" << header->destination << ", path:" <<
+        //         header->path
+        //         << ", interface:" << header->interface << ", member:" << header->member;
+        dbus_message_unref(receiveMsg);
+    }
+    return true;
+}
+
+/*
+ * 将报文数组分隔成符合dbus协议标准的dbus消息
+ *
+ * @param buffer: 报文字节数组
+ * @param out: dbus消息List
+ */
+void splitDBusMsg(const QByteArray &buffer, QList<QByteArray> &out)
+{
+    // size 184 不能使用 ‘l’ 来分割
+    // "l\x01\x00\x01\b\x00\x00\x00l\x03\x00\x00\xA0\x00\x00\x00\x01\x01o\x00\x1F\x00\x00\x00/com/deepin/dataserver/Calendar\x00\x06\x01s\x00\x1E\x00\x00\x00""com.deepin.dataserver.Calendar\x00\x00\x02\x01s\x00\x1E\x00\x00\x00""com.deepin.dataserver.Calendar\x00\x00\x03\x01s\x00\x10\x00\x00\x00GetFestivalMonth\x00\x00\x00\x00\x00\x00\x00\x00\b\x01g\x00\x02uu\x00\xE6\x07\x00\x00\x01\x00\x00\x00"
+
+    // size 486
+    // "l\x01\x00\x01\xA2\x00\x00\x00\x07\x00\x00\x00y\x00\x00\x00\x01\x01o\x00\x15\x00\x00\x00/org/freedesktop/DBus\x00\x00\x00\x02\x01s\x00\x14\x00\x00\x00org.freedesktop.DBus\x00\x00\x00\x00\x06\x01s\x00\x14\x00\x00\x00org.freedesktop.DBus\x00\x00\x00\x00\b\x01g\x00\x01s\x00\x00\x03\x01s\x00\b\x00\x00\x00""AddMatch\x00\x00\x00\x00\x00\x00\x00\x00\x9D\x00\x00\x00type='signal',sender='org.freedesktop.DBus',interface='org.freedesktop.DBus',member='NameOwnerChanged',path='/org/freedesktop/DBus',arg0='org.gtk.vfs.Daemon'\x00l\x01\x00\x01\x1C\x00\x00\x00\b\x00\x00\x00\x83\x00\x00\x00\x01\x01o\x00\x15\x00\x00\x00/org/freedesktop/DBus\x00\x00\x00\x02\x01s\x00\x14\x00\x00\x00org.freedesktop.DBus\x00\x00\x00\x00\x06\x01s\x00\x14\x00\x00\x00org.freedesktop.DBus\x00\x00\x00\x00\b\x01g\x00\x02su\x00\x03\x01s\x00\x12\x00\x00\x00StartServiceByName\x00\x00\x00\x00\x00\x00\x12\x00\x00\x00org.gtk.vfs.Daemon\x00\x00\x00\x00\x00\x00"
+
+    // 因为要先握手再发真正的消息 所以握手消息不会出现缓存的情况
+    // 最后一次握手的时候hello消息会出现粘包的情况
+    // 135
+    // "BEGIN\r\nl\x01\x00\x01\x00\x00\x00\x00\x01\x00\x00\x00n\x00\x00\x00\x01\x01o\x00\x15\x00\x00\x00/org/freedesktop/DBus\x00\x00\x00\x06\x01s\x00\x14\x00\x00\x00org.freedesktop.DBus\x00\x00\x00\x00\x02\x01s\x00\x14\x00\x00\x00org.freedesktop.DBus\x00\x00\x00\x00\x03\x01s\x00\x05\x00\x00\x00Hello\x00\x00\x00"
+    if (buffer.startsWith("BEGIN")) {
+        out.push_back(buffer.left(7));
+        out.push_back(buffer.mid(7));
+        return;
+    }
+
+    // 握手消息
+    if (buffer[0] != 'B' && buffer[0] != 'l') {
+        out.push_back(buffer);
+        return;
+    }
+
+    if (buffer.size() < 16) {
+        out.push_back(buffer);
+        return;
+    }
+
+    bool bigEndian;
+    if (buffer[0] == 'B') {
+        bigEndian = true;
+    } else {
+        bigEndian = false;
+    }
+
+    QByteArray tmp = buffer;
+    while (true) {
+        // Length in bytes of the message body
+        auto bodyLenArray = tmp.mid(4, 4);
+        auto bodyLen = byteAraryToInt(bodyLenArray, bigEndian);
+        // A UINT32 giving the length of the array data in bytes
+        auto arrLen = tmp.mid(12, 4);
+        int arrayLen = byteAraryToInt(arrLen, bigEndian);
+        int headerLen = alignBy8(12 + 4 + arrayLen);
+        out.push_back(tmp.left(bodyLen + headerLen));
+        if (bodyLen + headerLen >= tmp.size()) {
+            break;
+        }
+        tmp = tmp.mid(bodyLen + headerLen);
+    }
 }

@@ -91,10 +91,14 @@ private:
      */
     bool isDbusAuthMsg(const QByteArray &byteArray)
     {
-        if (byteArray[0] != 'l' && byteArray[0] != 'B' && !byteArray.contains("BEGIN")) {
+        if (byteArray.size() < 2) {
             return true;
         }
-        return false;
+        // buffer[0] 大小端  buffer[1] Message type 1 2 3 4 分别表示METHOD_CALL METHOD_RETURN ERROR SIGNAL
+        if ((byteArray[0] == 'l' || byteArray[0] == 'B') && byteArray[2] < 5) {
+            return false;
+        }
+        return true;
     }
 
     /*

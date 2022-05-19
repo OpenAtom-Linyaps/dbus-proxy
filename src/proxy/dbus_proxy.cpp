@@ -164,93 +164,91 @@ void DbusProxy::onReadyReadClient()
 {
     // box client socket address
     QLocalSocket *boxClient = static_cast<QLocalSocket *>(sender());
-    qDebug() << "onReadyReadClient called, boxClient:" << boxClient;
+    qDebug() << boxClient << "onReadyReadClient called";
+
     if (boxClient) {
-        // Fix 客户端在代理处理转发期间又发来了数据不会触发回调
+        // 查找客户端对应的代理
+        QLocalSocket *proxyClient = nullptr;
+        if (relations.contains(boxClient)) {
+            proxyClient = relations[boxClient];
+        } else {
+            qCritical() << "boxClient:" << boxClient << " related proxyClient not found";
+        }
+        // 代理未连接上dbus daemon，尝试重新连接dbus daemon一次
+        if (proxyClient && !connStatus.contains(proxyClient)) {
+            bool ret = startConnectDbusDaemon(proxyClient, daemonPath);
+            qDebug() << proxyClient << " start reconnect dbus-daemon ret:" << ret;
+        }
+
+        // 客户端在代理处理转发期间又发来了数据不会触发onReadyReadClient回调
         while (boxClient->bytesAvailable() > 0) {
-            // Fix to do dbus 消息会缓存 需要分割成一条一条的
+            // dbus 消息会缓存 需要分割成一条一条的
             QByteArray data = boxClient->readAll();
             qDebug() << "Read Data From Client size:" << data.size();
             qDebug() << "Read Data From Client:" << data;
-            QByteArray helloData;
-            bool isHelloMsg = data.contains("BEGIN");
-            if (isHelloMsg) {
-                // auth begin msg is not normal header
-                qDebug() << "get client hello msg";
-                helloData = data.mid(7);
-            }
-
-            Header header;
-            bool ret = false;
-            if (isHelloMsg) {
-                ret = parseHeader(helloData, &header);
-            } else {
-                ret = parseHeader(data, &header);
-            }
-            if (!ret) {
-                qDebug() << "parseHeader is not a normal msg";
-            }
-
-            QLocalSocket *proxyClient = nullptr;
-            if (relations.contains(boxClient)) {
-                proxyClient = relations[boxClient];
-            } else {
-                qCritical() << "boxClient:" << boxClient << " related proxyClient not found";
-            }
-            // 代理未连接上dbus daemon，尝试重新连接dbus daemon一次
-            if (proxyClient && !connStatus.contains(proxyClient)) {
-                ret = startConnectDbusDaemon(proxyClient, daemonPath);
-                qDebug() << proxyClient << " start reconnect dbus-daemon ret:" << ret;
-            }
-
-            // 判断是否满足过滤规则
-            bool isMatch = filter.isMessageMatch(header.destination, header.path, header.interface);
-            qDebug() << "msg destination:" << header.destination << ", header.path:" << header.path
-                     << ", header.interface:" << header.interface << ", header.member:" << header.member
-                     << ", dbus msg match filter ret:" << isMatch;
-            if (!isDbusAuthMsg(data)) {
-                sendDataToServer(appId, header.destination, header.path, header.interface);
-            }
-            // 握手信息不拦截
-            if (!isDbusAuthMsg(data) && !isMatch) {
-                // 未配置权限申请用户授权
-                int result = Allow;
-                if (!qgetenv("DBUS_PROXY_INTERCEPT").isNull()) {
-                    result = requestPermission(appId);
-                }
-                // 记录应用通过dbus访问的宿主机资源
-                if (result != Allow) {
-                    if (isNeedReply(&header)) {
-                        QByteArray reply = createFakeReplyMsg(
-                            data, header.serial + 1, boxClientAddr, "org.freedesktop.DBus.Error.AccessDenied",
-                            "org.freedesktop.DBus.Error.AccessDenied, please config permission first!");
-                        // 伪造 错误消息格式给客户端
-                        // 将消息发送方 header中的serial 填充到 reply_serial
-                        // 填写消息类型 flags(是否需要回复) 消息body 需要修改消息body长度
-                        // 生成一个惟一的序列号
-                        boxClient->write(reply);
-                        boxClient->waitForBytesWritten(3000);
-                        qDebug() << "reply size:" << reply.size();
-                        qDebug() << reply;
+            QList<QByteArray> msgList;
+            // 分割缓存中的dbus消息
+            splitDBusMsg(data, msgList);
+            for (auto item : msgList) {
+                Header header;
+                bool isMatch = true;
+                if (!isDbusAuthMsg(item)) {
+                    if (!parseDBusMsg(item, &header)) {
+                        qWarning() << "onReadyReadClient parse an abnormal dbus msg, msg:" << item
+                                   << ", size:" << item.size();
+                    } else {
+                        // 判断是否满足过滤规则
+                        isMatch = filter.isMessageMatch(header.destination, header.path, header.interface);
+                        qDebug() << "dbus msg serial:" << header.serial << ", reply_serial:" << header.replySerial
+                                 << ", sender:" << header.sender << ", destination:" << header.destination
+                                 << ", header.path:" << header.path
+                                 << ", header.interface:" << header.interface << ", header.member:" << header.member
+                                 << ", dbus msg match filter ret:" << isMatch;
+                        // 记录应用的dbus访问信息
+                        sendDataToServer(appId, header.destination, header.path, header.interface);
                     }
+                }
+
+                // 握手信息不拦截
+                if (!isDbusAuthMsg(item) && !isMatch) {
+                    // 未配置权限申请用户授权
+                    int result = Allow;
+                    if (!qgetenv("DBUS_PROXY_INTERCEPT").isNull()) {
+                        result = requestPermission(appId);
+                    }
+                    // 记录应用通过dbus访问的宿主机资源
+                    if (result != Allow) {
+                        if (isNeedReply(&header)) {
+                            QByteArray reply = createFakeReplyMsg(
+                                data, header.serial + 1, boxClientAddr, "org.freedesktop.DBus.Error.AccessDenied",
+                                "org.freedesktop.DBus.Error.AccessDenied, please config permission first!");
+                            // 伪造 错误消息格式给客户端
+                            // 将消息发送方 header中的serial 填充到 reply_serial
+                            // 填写消息类型 flags(是否需要回复) 消息body 需要修改消息body长度
+                            // 生成一个惟一的序列号
+                            boxClient->write(reply);
+                            boxClient->waitForBytesWritten(1000);
+                            qDebug() << "reply size:" << reply.size();
+                            qDebug() << reply;
+                        }
+                        return;
+                    }
+                }
+                if (!connStatus.contains(proxyClient)) {
+                    qCritical() << proxyClient << " not connect to dbus-daemon";
                     return;
                 }
+                proxyClient->write(item);
+                proxyClient->waitForBytesWritten(1000);
+                qDebug() << proxyClient << " send data to dbus-daemon done, msg:" << item << ", size:" << item.size();
+                // Fix 客户端在代理处理转发期间又发来了数据不会触发回调
+                // while (boxClient->bytesAvailable() > 0) {
+                //     QByteArray leftData = boxClient->readAll();
+                //     proxyClient->write(leftData);
+                //     proxyClient->waitForBytesWritten(1000);
+                //     qDebug() << boxClient << " onReadyReadClient data left:" << boxClient->bytesAvailable();
+                // }
             }
-            if (!connStatus.contains(proxyClient)) {
-                qCritical() << proxyClient << " not connect to dbus-daemon";
-                return;
-            }
-            // 查找对应的 dbus 代理转发
-            proxyClient->write(data);
-            proxyClient->waitForBytesWritten(1000);
-            qDebug() << proxyClient << " send data to dbus-daemon done";
-            // Fix 客户端在代理处理转发期间又发来了数据不会触发回调
-            // while (boxClient->bytesAvailable() > 0) {
-            //     QByteArray leftData = boxClient->readAll();
-            //     proxyClient->write(leftData);
-            //     proxyClient->waitForBytesWritten(1000);
-            //     qDebug() << boxClient << " onReadyReadClient data left:" << boxClient->bytesAvailable();
-            // }
         }
     }
 }
@@ -284,44 +282,43 @@ void DbusProxy::onConnectedServer()
 void DbusProxy::onReadyReadServer()
 {
     QLocalSocket *daemonClient = static_cast<QLocalSocket *>(QObject::sender());
+    // 查找代理对应的客户端
+    QLocalSocket *boxClient = nullptr;
+    for (auto client : relations.keys()) {
+        if (relations[client] == daemonClient) {
+            boxClient = client;
+            break;
+        }
+    }
+
     while (daemonClient->bytesAvailable() > 0) {
         QByteArray receiveDta = daemonClient->readAll();
         qDebug() << "receive from dbus-daemon, data size:" << receiveDta.size();
         qDebug() << receiveDta;
-        // is a right way to judge?
-        bool isHelloReply = receiveDta.contains("NameAcquired");
-        if (isHelloReply) {
-            qDebug() << "parse msg header from dbus-daemon";
-            Header header;
-            bool ret = parseHeader(receiveDta, &header);
-            if (!ret) {
-                qCritical() << "dbus-daemon msg parseHeader err";
+        QList<QByteArray> msgList;
+        // 分割缓存中的dbus消息
+        splitDBusMsg(receiveDta, msgList);
+        for (auto item : msgList) {
+            // is a right way to judge?
+            bool isHelloReply = item.contains("NameAcquired");
+            if (isHelloReply) {
+                qDebug() << "parse msg header from dbus-daemon";
+                Header header;
+                if (!parseDBusMsg(item, &header)) {
+                    qWarning() << "onReadyReadServer parse an abnormal dbus msg, msg:" << item
+                               << ", size:" << item.size();
+                }
+                boxClientAddr = header.destination;
+                qDebug() << "boxClientAddr:" << boxClientAddr;
             }
-            boxClientAddr = header.destination;
-            qDebug() << "boxClientAddr:" << boxClientAddr;
-        }
-
-        // 查找代理对应的客户端
-        QLocalSocket *boxClient = nullptr;
-        for (auto client : relations.keys()) {
-            if (relations[client] == daemonClient) {
-                boxClient = client;
-                break;
+            // 将消息转发给客户端
+            if (boxClient) {
+                boxClient->write(item);
+                boxClient->waitForBytesWritten(1000);
+                qDebug() << boxClient << " send data to box dbus client done, msg:" << item << ", size:" << item.size();
+            } else {
+                qCritical() << daemonClient << " related boxClient not found";
             }
-        }
-        // 将消息转发给客户端
-        if (boxClient) {
-            boxClient->write(receiveDta);
-            boxClient->waitForBytesWritten(3000);
-            qDebug() << boxClient << " send data to box dbus client done, data size:" << receiveDta.size();
-            // while (daemonClient->bytesAvailable() > 0) {
-            //     QByteArray leftData = daemonClient->readAll();
-            //     boxClient->write(leftData);
-            //     boxClient->waitForBytesWritten(1000);
-            //     qDebug() << boxClient << " onReadyReadServer data left:" << daemonClient->bytesAvailable();
-            // }
-        } else {
-            qCritical() << daemonClient << " related boxClient not found";
         }
     }
 }

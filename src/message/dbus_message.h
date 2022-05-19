@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include <dbus/dbus.h>
+
 #include <QString>
 #include <QtGlobal>
 
@@ -111,8 +113,26 @@ char *getSignature(const QByteArray &buffer, quint32 *offset, quint32 endOffset)
  * 从报文中解析dbus消息报文头
  *
  * @param buffer: 报文字节数组
- * @param header: 偏移量开始地址
+ * @param header: dbus消息报文头
  *
  * @return bool: true:解析成功 false:失败
  */
 bool parseHeader(const QByteArray &buffer, Header *header);
+
+/*
+ * 从报文中解析dbus消息报文头
+ *
+ * @param byteArray: 报文字节数组
+ * @param header: dbus消息报文头
+ *
+ * @return bool: true:解析成功 false:失败
+ */
+bool parseDBusMsg(const QByteArray &byteArray, Header *header);
+
+/*
+ * 将报文数组分隔成符合dbus协议标准的dbus消息
+ *
+ * @param buffer: 报文字节数组
+ * @param out: dbus消息List
+ */
+void splitDBusMsg(const QByteArray &buffer, QList<QByteArray> &out);
