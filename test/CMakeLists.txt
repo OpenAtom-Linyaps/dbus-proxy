@@ -1,6 +1,10 @@
 # 开启GTest开关
 enable_testing()
 
+# 单元测试统计覆盖率
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage")
+
 find_package(GTest REQUIRED)
 
 set(LINK_LIBS

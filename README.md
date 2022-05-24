@@ -84,6 +84,18 @@ test@linghong:/$
 
 当前dbus-proxy demo由ll-service启动，后续待改造为ll-box启动。
 
+# 代码覆盖率测试
+add --coverage in CMakeLists.txt
+```bash
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage")
+```
+
+use gcov、lcov to generate convert html report, make shure at the top level of the project
+```bash
+./code_coverage.sh
+```
+
 # QA
 
 1. 沙箱内对session bus总线消息默认拦截处理，为保证玲珑适配应用dbus能正常工作，需要梳理所有适配应用对dbus总线的调用情况，工作量较大。
