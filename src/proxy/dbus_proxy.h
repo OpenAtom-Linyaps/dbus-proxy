@@ -158,5 +158,5 @@ private:
 
     QString appId;
     // 授权模块返回值
-    enum Choice { Deny = 0, DenyOnce, Allow, AllowOnce };
+    enum Choice { Allow = 0, Deny};
 };

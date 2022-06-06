@@ -58,15 +58,6 @@ int main(int argc, char *argv[])
     // 保存应用的appId 向权限模块申请授权时使用
     server.saveAppId(QString(argv[1]));
 
-    server.filter.addNameFilter("org.freedesktop.portal.*");
-    server.filter.addPathFilter("/org/freedesktop/portal/*");
-    server.filter.addInterfaceFilter("org.freedesktop.portal.");
-
-    server.filter.addNameFilter("org.freedesktop.DBus");
-    server.filter.addPathFilter("/");
-    server.filter.addPathFilter("/org/freedesktop/DBus");
-    server.filter.addInterfaceFilter("org.freedesktop.DBus");
-
     // 初始化filter
     QStringList nameFilterList = QString(QLatin1String(argv[4])).split(",");
     for (auto item : nameFilterList) {

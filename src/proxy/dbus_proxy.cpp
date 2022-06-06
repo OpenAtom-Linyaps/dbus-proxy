@@ -149,14 +149,20 @@ int requestPermission(const QString &appId)
     QDBusInterface interface("org.desktopspec.permission", "/org/desktopspec/permission", "org.desktopspec.permission",
                              QDBusConnection::sessionBus());
     // 25s dbus 客户端默认25s必须回
-    interface.setTimeout(1000 * 60 * 25);
-    QDBusPendingReply<int> reply = interface.call("request", appId, "org.desktopspec.permission.Account");
+    QDBusPendingReply<QString> reply = interface.call("Request", appId, "linglong", "screenshot");
     reply.waitForFinished();
     int ret = -1;
     if (reply.isValid()) {
-        ret = reply.value();
+        ret = reply.value().toInt();
+        if (ret) {
+            QDBusPendingReply<void> dialogReply =
+                interface.call("ShowDisablePermissionDialog", appId, "linglong", "screenshot");
+            dialogReply.waitForFinished();
+        }
+    } else {
+        qCritical() << appId << " requestPermission err:" << reply.error();
     }
-    qDebug() << "requestPermission ret:" << ret;
+    qDebug() << appId << " requestPermission ret:" << ret;
     return ret;
 }
 
@@ -191,13 +197,13 @@ void DbusProxy::onReadyReadClient()
             splitDBusMsg(data, msgList);
             for (auto item : msgList) {
                 Header header;
-                bool isMatch = true;
+                bool isMatch = false;
                 if (!isDbusAuthMsg(item)) {
                     if (!parseDBusMsg(item, &header)) {
                         qWarning() << "onReadyReadClient parse an abnormal dbus msg, msg:" << item
                                    << ", size:" << item.size();
                     } else {
-                        // 判断是否满足过滤规则
+                        // 判断是否满足过滤规则 当前实现由白名单改为黑名单
                         isMatch = filter.isMessageMatch(header.destination, header.path, header.interface);
                         qDebug() << "dbus msg serial:" << header.serial << ", reply_serial:" << header.replySerial
                                  << ", sender:" << header.sender << ", destination:" << header.destination
@@ -210,7 +216,7 @@ void DbusProxy::onReadyReadClient()
                 }
 
                 // 握手信息不拦截
-                if (!isDbusAuthMsg(item) && !isMatch) {
+                if (!isDbusAuthMsg(item) && isMatch) {
                     // 未配置权限申请用户授权
                     int result = Allow;
                     if (!qgetenv("DBUS_PROXY_INTERCEPT").isNull()) {
@@ -268,7 +274,8 @@ void DbusProxy::onDisconnectedClient()
     }
     proxyClient->disconnectFromServer();
     relations.remove(sender);
-    delete proxyClient;
+    // delete proxyClient;
+    proxyClient->deleteLater();
 }
 
 // dbus-daemon 服务端回调函数
