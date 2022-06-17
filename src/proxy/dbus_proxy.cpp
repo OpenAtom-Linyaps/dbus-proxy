@@ -38,46 +38,6 @@ DbusProxy::~DbusProxy()
     }
 }
 
-void DbusProxy::releaseRes(QThread *thread, PostThread *worker)
-{
-    qDebug() << "releaseRes thread:" << thread << ", worker:" << worker;
-    if (thread) {
-        thread->quit();
-        thread->wait(500);
-        delete thread;
-    }
-
-    if (worker) {
-        delete worker;
-    }
-}
-
-/*
- * 将应用访问的dbus信息发送到服务端
- *
- * @param appId: 应用的appId
- * @param name: dbus 对象名字
- * @param path: dbus 对象路径
- * @param interface: dbus 对象接口
- */
-void DbusProxy::sendDataToServer(const QString &appId, const QString &name, const QString &path,
-                                 const QString &interface)
-{
-    QFileInfo fs("/deepin/linglong/config/dbus_proxy_config");
-    if (!fs.exists() && !fs.isFile()) {
-        qDebug() << "dbus_proxy_config not exist, report dbus data end";
-        return;
-    }
-
-    QThread *thread = new QThread();
-    PostThread *worker = new PostThread(appId, name, path, interface, thread);
-    worker->moveToThread(thread);
-    QObject::connect(thread, SIGNAL(started()), worker, SLOT(sendDataToServer()));
-    QObject::connect(worker, SIGNAL(finishPost(QThread *, PostThread *)), this,
-                     SLOT(releaseRes(QThread *, PostThread *)));
-    thread->start();
-}
-
 /*
  * 启动监听
  *
@@ -210,8 +170,6 @@ void DbusProxy::onReadyReadClient()
                                  << ", header.path:" << header.path
                                  << ", header.interface:" << header.interface << ", header.member:" << header.member
                                  << ", dbus msg match filter ret:" << isMatch;
-                        // 记录应用的dbus访问信息
-                        sendDataToServer(appId, header.destination, header.path, header.interface);
                     }
                 }
 

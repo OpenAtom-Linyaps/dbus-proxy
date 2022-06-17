@@ -2,14 +2,11 @@ aux_source_directory(proxy PROXY_SRC)
 aux_source_directory(message MSG_SRC)
 aux_source_directory(filter FILTER_SRC)
 
-aux_source_directory(${PROJECT_SOURCE_DIR}/src/post_request POST_SRC)
-
 set(MAIN_SOURCES
         main.cpp
         ${PROXY_SRC}
         ${FILTER_SRC}
         ${MSG_SRC}
-        ${POST_SRC}
         )
 
 set(LINK_LIBS

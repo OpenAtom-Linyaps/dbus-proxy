@@ -26,6 +26,7 @@ aux_source_directory(${PROJECT_SOURCE_DIR}/src/post_request POST_SRC)
 set(GTEST_SOURCES
         dbus_filter_test.cpp
         dbus_message_test.cpp
+        dbus_proxy_test.cpp
         ${PROXY_SRC}
         ${FILTER_SRC}
         ${MSG_SRC}

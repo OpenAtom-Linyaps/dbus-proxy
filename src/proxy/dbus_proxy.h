@@ -18,12 +18,9 @@
 #include <QLocalServer>
 #include <QObject>
 #include <QScopedPointer>
-#include <QThread>
 
 #include "filter/dbus_filter.h"
 #include "message/dbus_message.h"
-
-#include "post_request/post_thread.h"
 
 class DbusProxy : public QObject
 {
@@ -115,16 +112,6 @@ private:
     QByteArray createFakeReplyMsg(const QByteArray &byteMsg, quint32 serial, const QString &dst,
                                   const QString &errorName, const QString &errorMsg);
 
-    /*
-     * 将应用访问的dbus信息发送到服务端
-     *
-     * @param appId: 应用的appId
-     * @param name: dbus 对象名字
-     * @param path: dbus 对象路径
-     * @param interface: dbus 对象接口
-     */
-    void sendDataToServer(const QString &appId, const QString &name, const QString &path, const QString &interface);
-
 public:
     DbusFilter filter;
 
@@ -138,8 +125,6 @@ private slots:
     void onConnectedServer();
     void onReadyReadServer();
     void onDisconnectedServer();
-
-    void releaseRes(QThread *thread, PostThread *worker);
 
 private:
     // dbus-proxy server, wait for dbus client in box to connect
