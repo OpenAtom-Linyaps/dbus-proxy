@@ -1,3 +1,9 @@
+linglong-dbus-proxy (1.3.3.5-1) unstable; urgency=medium
+
+  * update version for deepin.
+
+ -- huqinghong <liujianqiang@uniontech.com>  Mon, 01 Aug 2022 20:53:47 +0800
+
 linglong-dbus-proxy (1.3.3-1) unstable; urgency=medium
 
   * fix popup permission dialog
