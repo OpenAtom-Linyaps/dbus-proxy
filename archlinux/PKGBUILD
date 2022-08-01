@@ -1,0 +1,17 @@
+pkgname=linglong-dbus-proxy
+pkgver=1.3.2
+pkgrel=1
+arch=('x86_64')
+depends=('qt5-base')
+makedepends=('cmake')
+build() {
+    cmake -B build -S "../.." \
+        -DCMAKE_BUILD_TYPE='Release' \
+        -DCMAKE_INSTALL_PREFIX='/usr' \
+        -Wno-dev
+    cmake --build build
+}
+
+package() {
+    DESTDIR="$pkgdir" cmake --install build
+}
