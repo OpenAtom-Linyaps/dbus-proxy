@@ -114,12 +114,18 @@ int requestPermission(const QString &appId)
     int ret = -1;
     if (reply.isValid()) {
         ret = reply.value().toInt();
-        if (ret) {
+        // DDE 查询到用户上次弹窗选择结果是拒绝则返回1
+        if (ret == 1) {
             QDBusPendingReply<void> dialogReply =
                 interface.call("ShowDisablePermissionDialog", appId, "linglong", "screenshot");
             dialogReply.waitForFinished();
         }
     } else {
+        if ("org.desktopspec.permission.SystemLevelRestrictions" == reply.error().name()) {
+            QDBusPendingReply<void> dialogReply =
+                interface.call("ShowDisablePermissionDialog", appId, "linglong", "screenshot");
+            dialogReply.waitForFinished();
+        }
         qCritical() << appId << " requestPermission err:" << reply.error();
     }
     qDebug() << appId << " requestPermission ret:" << ret;
