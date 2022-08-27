@@ -16,6 +16,9 @@
 #include <QDBusInterface>
 #include <QDBusReply>
 #include <QFileInfo>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
 
 DbusProxy::DbusProxy()
     : serverProxy(new QLocalServer())
@@ -104,32 +107,70 @@ void DbusProxy::onNewConnection()
     qDebug() << "onNewConnection create: " << client << "<===>" << proxyClient << " relation, ret:" << ret;
 }
 
-int requestPermission(const QString &appId)
+int requestPermission(const QString &appId, const QString &id)
 {
+    if (id.isEmpty()) {
+        qCritical() << "id is empty";
+        return -1;
+    }
     QDBusInterface interface("org.desktopspec.permission", "/org/desktopspec/permission", "org.desktopspec.permission",
                              QDBusConnection::sessionBus());
     // 25s dbus 客户端默认25s必须回
-    QDBusPendingReply<QString> reply = interface.call("Request", appId, "linglong", "screenshot");
+    QDBusPendingReply<QString> reply = interface.call("Request", appId, "linglong", id);
     reply.waitForFinished();
     int ret = -1;
     if (reply.isValid()) {
         ret = reply.value().toInt();
         // DDE 查询到用户上次弹窗选择结果是拒绝则返回1
         if (ret == 1) {
-            QDBusPendingReply<void> dialogReply =
-                interface.call("ShowDisablePermissionDialog", appId, "linglong", "screenshot");
+            QDBusPendingReply<void> dialogReply = interface.call("ShowDisablePermissionDialog", appId, "linglong", id);
             dialogReply.waitForFinished();
         }
     } else {
         if ("org.desktopspec.permission.SystemLevelRestrictions" == reply.error().name()) {
-            QDBusPendingReply<void> dialogReply =
-                interface.call("ShowDisablePermissionDialog", appId, "linglong", "screenshot");
+            QDBusPendingReply<void> dialogReply = interface.call("ShowDisablePermissionDialog", appId, "linglong", id);
             dialogReply.waitForFinished();
         }
         qCritical() << appId << " requestPermission err:" << reply.error();
     }
-    qDebug() << appId << " requestPermission ret:" << ret;
+    qDebug() << appId << " requestPermission id:" << id << ",ret:" << ret;
     return ret;
+}
+
+QString DbusProxy::getPermissionId(const QString &name, const QString &path, const QString &ifce)
+{
+    const QString cfgPath = "/usr/share/permission/policy/linglong/dbus_map_config";
+    QFile cfgFile(cfgPath);
+    if (!cfgFile.open(QIODevice::ReadOnly)) {
+        qCritical() << "getPermissionId err" << cfgFile.errorString();
+        return "";
+    }
+    QString qValue = cfgFile.readAll();
+    cfgFile.close();
+    QJsonParseError parseJsonErr;
+    QJsonDocument document = QJsonDocument::fromJson(qValue.toUtf8(), &parseJsonErr);
+    if (QJsonParseError::NoError != parseJsonErr.error) {
+        qCritical() << "getPermissionId parse config file err";
+        return "";
+    }
+
+    QJsonObject dataObject = document.object();
+    // 根据dbus信息查找权限id
+    for (auto key : dataObject.keys()) {
+        auto dbusObject = dataObject.value(key);
+        if (dbusObject.isArray()) {
+            QJsonArray dbusArray = dbusObject.toArray();
+            for (int i = 0; i < dbusArray.size(); i++) {
+                QJsonObject item = dbusArray.at(i).toObject();
+                if (name == item.value("name").toString() && path == item.value("path").toString()
+                    && ifce == item.value("ifce").toString()) {
+                    return key;
+                }
+            }
+        }
+    }
+    qWarning() << "permission id not found " << QString("name:%1,path:%2,interface:%3").arg(name).arg(path).arg(ifce);
+    return "";
 }
 
 void DbusProxy::onReadyReadClient()
@@ -184,7 +225,8 @@ void DbusProxy::onReadyReadClient()
                     // 未配置权限申请用户授权
                     int result = Allow;
                     if (!qgetenv("DBUS_PROXY_INTERCEPT").isNull()) {
-                        result = requestPermission(appId);
+                        QString id = getPermissionId(header.destination, header.path, header.interface);
+                        result = requestPermission(appId, id);
                     }
                     // 记录应用通过dbus访问的宿主机资源
                     if (result != Allow) {

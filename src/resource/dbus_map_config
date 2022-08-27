@@ -1,0 +1,12 @@
+{
+	"screenshot": [{
+		"name": "com.deepin.Screenshot",
+		"path": "/com/deepin/Screenshot",
+		"ifce": "com.deepin.Screenshot"
+	}],
+	"calendar": [{
+		"name": "com.deepin.Calendar",
+		"path": "/com/deepin/Calendar",
+		"ifce": "com.deepin.Calendar"
+	}]
+}

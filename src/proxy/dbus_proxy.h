@@ -99,6 +99,17 @@ private:
     }
 
     /*
+     * 通过dbus信息获取上报DDE的权限id
+     *
+     * @param name: dbus name
+     * @param path: dbus path
+     * @param ifce: dbus ifce
+     *
+     * @return QString: 权限id
+     */
+    QString getPermissionId(const QString &name, const QString &path, const QString &ifce);
+
+    /*
      * 创建指定参数的dbus错误消息
      *
      * @param byteMsg: dbus socket报文
