@@ -1,24 +1,18 @@
 /*
- * Copyright (c) 2022. Uniontech Software Ltd. All rights reserved.
+ * SPDX-FileCopyrightText: 2022 UnionTech Software Technology Co., Ltd.  
  *
- * Author:     huqinghong <huqinghong@uniontech.com>
- *
- * Maintainer: huqinghong <huqinghong@uniontech.com>
- *
- * SPDX-License-Identifier: GPL-3.0-or-later
+ * SPDX-License-Identifier: LGPL-3.0-or-later
  */
 
-#pragma once
+#ifndef LINGLONG_DBUS_PROXY_SRC_MESSAGE_DBUS_MESSAGE_H
+#define LINGLONG_DBUS_PROXY_SRC_MESSAGE_DBUS_MESSAGE_H
 
 #include <dbus/dbus.h>
 
 #include <QString>
 #include <QtGlobal>
 
-// 协议消息头定义
-// 参考 Here are the currently-defined header fields:
-// The following table summarizes the D-Bus types.
-// https://dbus.freedesktop.org/doc/dbus-specification.html#auth-command-auth
+// 协议消息头定义 https://dbus.freedesktop.org/doc/dbus-specification.html#auth-command-auth
 typedef struct {
     bool bigEndian;
     uchar type;
@@ -136,3 +130,4 @@ bool parseDBusMsg(const QByteArray &byteArray, Header *header);
  * @param out: dbus消息List
  */
 void splitDBusMsg(const QByteArray &buffer, QList<QByteArray> &out);
+#endif

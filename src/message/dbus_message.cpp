@@ -1,11 +1,7 @@
 /*
- * Copyright (c) 2022. Uniontech Software Ltd. All rights reserved.
+ * SPDX-FileCopyrightText: 2022 UnionTech Software Technology Co., Ltd.  
  *
- * Author:     huqinghong <huqinghong@uniontech.com>
- *
- * Maintainer: huqinghong <huqinghong@uniontech.com>
- *
- * SPDX-License-Identifier: GPL-3.0-or-later
+ * SPDX-License-Identifier: LGPL-3.0-or-later
  */
 
 #include "dbus_message.h"
@@ -165,8 +161,6 @@ bool parseHeader(const QByteArray &buffer, Header *header)
         return false;
     }
 
-    // Endianness flag; ASCII 'l' for little-endian or ASCII 'B' for big-endian. Both header and body are in this
-    // endianness.
     if (buffer[0] == 'B') {
         header->bigEndian = true;
     } else if (buffer[0] == 'l') {
@@ -177,17 +171,14 @@ bool parseHeader(const QByteArray &buffer, Header *header)
 
     // Message type 1 2 3 4 分别表示METHOD_CALL METHOD_RETURN ERROR SIGNAL
     header->type = buffer[1];
-    // Bitwise OR of flags. Unknown flags must be ignored. Currently-defined flags are described below.
     // NO_REPLY_EXPECTED  NO_AUTO_START currently receive 0
     header->flags = buffer[2];
-    // Length in bytes of the message body   receive 20?
+    // Length in bytes of the message body
     auto lengthArray = buffer.mid(4, 4);
     header->length = byteAraryToInt(lengthArray, header->bigEndian);
     // The serial of this message, used as a cookie by the sender to identify the reply corresponding to this request.
-    // This must not be zero. currently is 2
     auto serialArray = buffer.mid(8, 4);
     header->serial = byteAraryToInt(serialArray, header->bigEndian);
-    // add by hqh debug
     qDebug() << QString("parse_header msg header type:%1,flags:%2,length:%3,serial:%4")
                     .arg(header->type)
                     .arg(header->flags)
@@ -197,7 +188,6 @@ bool parseHeader(const QByteArray &buffer, Header *header)
         return false;
     }
 
-    // A UINT32 giving the length of the array data in bytes
     auto arrLen = buffer.mid(12, 4);
     arrayLen = byteAraryToInt(arrLen, header->bigEndian);
 
@@ -324,7 +314,6 @@ bool parseHeader(const QByteArray &buffer, Header *header)
             break;
         }
         default:
-            // Unknown header field, for safety, fail parse
             return false;
         }
     }
@@ -368,7 +357,6 @@ bool parseHeader(const QByteArray &buffer, Header *header)
         break;
 
     default:
-        // Unknown message type, for safety, fail parse
         return false;
     }
     return true;
@@ -412,12 +400,6 @@ bool parseDBusMsg(const QByteArray &byteArray, Header *header)
         header->sender = QString(QLatin1String(dbus_message_get_sender(receiveMsg)));
         header->type = dbus_message_get_type(receiveMsg);
         header->flags = byteArray[2];
-        // 需要获取消息flags 判断消息sender是否需要回复
-        // dbus_message_get_no_reply()
-        // qDebug() << "dbus msg serial:" << header->serial << ", reply_serial:" << header->replySerial
-        //         << ", sender:" << header->sender << ", destination:" << header->destination << ", path:" <<
-        //         header->path
-        //         << ", interface:" << header->interface << ", member:" << header->member;
         dbus_message_unref(receiveMsg);
     }
     return true;
@@ -431,16 +413,6 @@ bool parseDBusMsg(const QByteArray &byteArray, Header *header)
  */
 void splitDBusMsg(const QByteArray &buffer, QList<QByteArray> &out)
 {
-    // size 184 不能使用 ‘l’ 来分割
-    // "l\x01\x00\x01\b\x00\x00\x00l\x03\x00\x00\xA0\x00\x00\x00\x01\x01o\x00\x1F\x00\x00\x00/com/deepin/dataserver/Calendar\x00\x06\x01s\x00\x1E\x00\x00\x00""com.deepin.dataserver.Calendar\x00\x00\x02\x01s\x00\x1E\x00\x00\x00""com.deepin.dataserver.Calendar\x00\x00\x03\x01s\x00\x10\x00\x00\x00GetFestivalMonth\x00\x00\x00\x00\x00\x00\x00\x00\b\x01g\x00\x02uu\x00\xE6\x07\x00\x00\x01\x00\x00\x00"
-
-    // size 486
-    // "l\x01\x00\x01\xA2\x00\x00\x00\x07\x00\x00\x00y\x00\x00\x00\x01\x01o\x00\x15\x00\x00\x00/org/freedesktop/DBus\x00\x00\x00\x02\x01s\x00\x14\x00\x00\x00org.freedesktop.DBus\x00\x00\x00\x00\x06\x01s\x00\x14\x00\x00\x00org.freedesktop.DBus\x00\x00\x00\x00\b\x01g\x00\x01s\x00\x00\x03\x01s\x00\b\x00\x00\x00""AddMatch\x00\x00\x00\x00\x00\x00\x00\x00\x9D\x00\x00\x00type='signal',sender='org.freedesktop.DBus',interface='org.freedesktop.DBus',member='NameOwnerChanged',path='/org/freedesktop/DBus',arg0='org.gtk.vfs.Daemon'\x00l\x01\x00\x01\x1C\x00\x00\x00\b\x00\x00\x00\x83\x00\x00\x00\x01\x01o\x00\x15\x00\x00\x00/org/freedesktop/DBus\x00\x00\x00\x02\x01s\x00\x14\x00\x00\x00org.freedesktop.DBus\x00\x00\x00\x00\x06\x01s\x00\x14\x00\x00\x00org.freedesktop.DBus\x00\x00\x00\x00\b\x01g\x00\x02su\x00\x03\x01s\x00\x12\x00\x00\x00StartServiceByName\x00\x00\x00\x00\x00\x00\x12\x00\x00\x00org.gtk.vfs.Daemon\x00\x00\x00\x00\x00\x00"
-
-    // 因为要先握手再发真正的消息 所以握手消息不会出现缓存的情况
-    // 最后一次握手的时候hello消息会出现粘包的情况
-    // 135
-    // "BEGIN\r\nl\x01\x00\x01\x00\x00\x00\x00\x01\x00\x00\x00n\x00\x00\x00\x01\x01o\x00\x15\x00\x00\x00/org/freedesktop/DBus\x00\x00\x00\x06\x01s\x00\x14\x00\x00\x00org.freedesktop.DBus\x00\x00\x00\x00\x02\x01s\x00\x14\x00\x00\x00org.freedesktop.DBus\x00\x00\x00\x00\x03\x01s\x00\x05\x00\x00\x00Hello\x00\x00\x00"
     if (buffer.startsWith("BEGIN")) {
         out.push_back(buffer.left(7));
         out.push_back(buffer.mid(7));

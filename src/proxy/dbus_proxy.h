@@ -1,14 +1,11 @@
 /*
- * Copyright (c) 2022. Uniontech Software Ltd. All rights reserved.
+ * SPDX-FileCopyrightText: 2022 UnionTech Software Technology Co., Ltd.  
  *
- * Author:     huqinghong <huqinghong@uniontech.com>
- *
- * Maintainer: huqinghong <huqinghong@uniontech.com>
- *
- * SPDX-License-Identifier: GPL-3.0-or-later
+ * SPDX-License-Identifier: LGPL-3.0-or-later
  */
 
-#pragma once
+#ifndef LINGLONG_DBUS_PROXY_SRC_MESSAGE_DBUS_PROXY_H
+#define LINGLONG_DBUS_PROXY_SRC_MESSAGE_DBUS_PROXY_H
 
 #include <dbus/dbus.h>
 
@@ -110,6 +107,16 @@ private:
     QString getPermissionId(const QString &name, const QString &path, const QString &ifce);
 
     /*
+     * 通过dde权限管理器向用户申请权限
+     *
+     * @param appId: 应用appId
+     * @param id: 申请的应用权限ID
+     *
+     * @return int: 申请结果
+     */
+    int requestPermission(const QString &appId, const QString &id);
+
+    /*
      * 创建指定参数的dbus错误消息
      *
      * @param byteMsg: dbus socket报文
@@ -156,3 +163,4 @@ private:
     // 授权模块返回值
     enum Choice { Allow = 0, Deny};
 };
+#endif

@@ -1,11 +1,7 @@
 /*
- * Copyright (c) 2022. Uniontech Software Ltd. All rights reserved.
+ * SPDX-FileCopyrightText: 2022 UnionTech Software Technology Co., Ltd.  
  *
- * Author:     huqinghong <huqinghong@uniontech.com>
- *
- * Maintainer: huqinghong <huqinghong@uniontech.com>
- *
- * SPDX-License-Identifier: GPL-3.0-or-later
+ * SPDX-License-Identifier: LGPL-3.0-or-later
  */
 
 #include <signal.h>
@@ -24,14 +20,12 @@ int main(int argc, char *argv[])
     QCoreApplication app(argc, argv);
 
     qSetMessagePattern("%{time yyyy-MM-dd hh:mm:ss.zzz} [%{appname}] [%{type}] %{message}");
-
+    // appId busType socketPath name path interface
     if (argc < 7) {
         qCritical() << "dbus proxy param err";
         return -1;
     }
 
-    // socket文件未删除，使用ll-box 将同一个json文件作为沙箱配置时会有问题（需要手动改socketpath地址）
-    // unlink(argv[3]);
     QString socketPath = argv[3];
     if (socketPath.isEmpty()) {
         qCritical() << "dbus proxy socketPath err";
@@ -60,15 +54,15 @@ int main(int argc, char *argv[])
 
     // 初始化filter
     QStringList nameFilterList = QString(QLatin1String(argv[4])).split(",");
-    for (auto item : nameFilterList) {
+    for (const auto &item : nameFilterList) {
         server.filter.addNameFilter(item);
     }
     QStringList pathFilterList = QString(QLatin1String(argv[5])).split(",");
-    for (auto item : pathFilterList) {
+    for (const auto &item : pathFilterList) {
         server.filter.addPathFilter(item);
     }
     QStringList interfaceFilterList = QString(QLatin1String(argv[6])).split(",");
-    for (auto item : interfaceFilterList) {
+    for (const auto &item : interfaceFilterList) {
         server.filter.addInterfaceFilter(item);
     }
 

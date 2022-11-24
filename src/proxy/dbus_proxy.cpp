@@ -1,11 +1,7 @@
 /*
- * Copyright (c) 2022. Uniontech Software Ltd. All rights reserved.
+ * SPDX-FileCopyrightText: 2022 UnionTech Software Technology Co., Ltd.  
  *
- * Author:     huqinghong <huqinghong@uniontech.com>
- *
- * Maintainer: huqinghong <huqinghong@uniontech.com>
- *
- * SPDX-License-Identifier: GPL-3.0-or-later
+ * SPDX-License-Identifier: LGPL-3.0-or-later
  */
 
 #include "dbus_proxy.h"
@@ -30,10 +26,9 @@ DbusProxy::~DbusProxy()
 {
     if (serverProxy) {
         serverProxy->close();
-        // delete serverProxy;
     }
 
-    for (auto client : relations.keys()) {
+    for (const auto &client : relations.keys()) {
         if (relations[client]) {
             delete relations[client];
             client->close();
@@ -85,7 +80,7 @@ bool DbusProxy::startConnectDbusDaemon(QLocalSocket *localProxy, const QString &
     connect(localProxy, SIGNAL(readyRead()), this, SLOT(onReadyReadServer()));
     qDebug() << "proxy client:" << localProxy << " start connect dbus-daemon...";
     localProxy->connectToServer(daemonPath);
-    // 等待3s
+    // 等待代理连接dbus-daemon
     if (!localProxy->waitForConnected(3000)) {
         qCritical() << "connect dbus-daemon error, msg:" << localProxy->errorString();
         return false;
@@ -107,7 +102,7 @@ void DbusProxy::onNewConnection()
     qDebug() << "onNewConnection create: " << client << "<===>" << proxyClient << " relation, ret:" << ret;
 }
 
-int requestPermission(const QString &appId, const QString &id)
+int DbusProxy::requestPermission(const QString &appId, const QString &id)
 {
     if (id.isEmpty()) {
         qCritical() << "id is empty";
@@ -115,14 +110,13 @@ int requestPermission(const QString &appId, const QString &id)
     }
     QDBusInterface interface("org.desktopspec.permission", "/org/desktopspec/permission", "org.desktopspec.permission",
                              QDBusConnection::sessionBus());
-    // 25s dbus 客户端默认25s必须回
     QDBusPendingReply<QString> reply = interface.call("Request", appId, "linglong", id);
     reply.waitForFinished();
     int ret = -1;
     if (reply.isValid()) {
         ret = reply.value().toInt();
         // DDE 查询到用户上次弹窗选择结果是拒绝则返回1
-        if (ret == 1) {
+        if (1 == ret) {
             QDBusPendingReply<void> dialogReply = interface.call("ShowDisablePermissionDialog", appId, "linglong", id);
             dialogReply.waitForFinished();
         }
@@ -156,7 +150,7 @@ QString DbusProxy::getPermissionId(const QString &name, const QString &path, con
 
     QJsonObject dataObject = document.object();
     // 根据dbus信息查找权限id
-    for (auto key : dataObject.keys()) {
+    for (const auto &key : dataObject.keys()) {
         auto dbusObject = dataObject.value(key);
         if (dbusObject.isArray()) {
             QJsonArray dbusArray = dbusObject.toArray();
@@ -280,7 +274,6 @@ void DbusProxy::onDisconnectedClient()
     }
     proxyClient->disconnectFromServer();
     relations.remove(sender);
-    // delete proxyClient;
     proxyClient->deleteLater();
 }
 
@@ -297,7 +290,7 @@ void DbusProxy::onReadyReadServer()
     QLocalSocket *daemonClient = static_cast<QLocalSocket *>(QObject::sender());
     // 查找代理对应的客户端
     QLocalSocket *boxClient = nullptr;
-    for (auto client : relations.keys()) {
+    for (const auto &client : relations.keys()) {
         if (relations[client] == daemonClient) {
             boxClient = client;
             break;
@@ -311,7 +304,7 @@ void DbusProxy::onReadyReadServer()
         QList<QByteArray> msgList;
         // 分割缓存中的dbus消息
         splitDBusMsg(receiveDta, msgList);
-        for (auto item : msgList) {
+        for (const auto &item : msgList) {
             // is a right way to judge?
             bool isHelloReply = item.contains("NameAcquired");
             if (isHelloReply) {
@@ -345,7 +338,7 @@ void DbusProxy::onDisconnectedServer()
     }
 
     QLocalSocket *boxClient = nullptr;
-    for (auto client : relations.keys()) {
+    for (const auto &client : relations.keys()) {
         if (relations[client] == sender) {
             boxClient = client;
             break;

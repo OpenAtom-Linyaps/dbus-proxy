@@ -1,11 +1,7 @@
 /*
- * Copyright (c) 2022. Uniontech Software Ltd. All rights reserved.
+ * SPDX-FileCopyrightText: 2022 UnionTech Software Technology Co., Ltd.  
  *
- * Author:     huqinghong <huqinghong@uniontech.com>
- *
- * Maintainer: huqinghong <huqinghong@uniontech.com>
- *
- * SPDX-License-Identifier: GPL-3.0-or-later
+ * SPDX-License-Identifier: LGPL-3.0-or-later
  */
 
 #include "dbus_filter.h"
@@ -26,10 +22,7 @@
  */
 bool DbusFilter::isRegularExp(const QString &expression)
 {
-    if (expression.endsWith("*") || expression.endsWith("+") || expression.endsWith("?")) {
-        return true;
-    }
-    return false;
+    return expression.endsWith("*") || expression.endsWith("+") || expression.endsWith("?");
 }
 
 /*
@@ -42,11 +35,8 @@ bool DbusFilter::isRegularExp(const QString &expression)
  */
 bool DbusFilter::isMatchRegExp(const QString &src, const QString &reg)
 {
-    QRegExp regx(reg);
-    if (src.contains(regx)) {
-        return true;
-    }
-    return false;
+    const QRegExp regx(reg);
+    return src.contains(regx);
 }
 
 /*
@@ -60,16 +50,14 @@ bool DbusFilter::isMatchRegExp(const QString &src, const QString &reg)
 bool DbusFilter::isMatchFilter(const QString &data, const QStringList &filterList)
 {
     bool isFound = false;
-    for (QString item : filterList) {
+    for (const QString &item : filterList) {
         if (item == data || (isRegularExp(item) && isMatchRegExp(data, item))) {
             isFound = true;
             break;
         }
     }
-    if (!isFound) {
-        return false;
-    }
-    return true;
+
+    return isFound;
 }
 
 /*

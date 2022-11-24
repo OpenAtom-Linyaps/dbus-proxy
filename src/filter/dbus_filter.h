@@ -1,14 +1,11 @@
 /*
- * Copyright (c) 2022. Uniontech Software Ltd. All rights reserved.
+ * SPDX-FileCopyrightText: 2022 UnionTech Software Technology Co., Ltd.  
  *
- * Author:     huqinghong <huqinghong@uniontech.com>
- *
- * Maintainer: huqinghong <huqinghong@uniontech.com>
- *
- * SPDX-License-Identifier: GPL-3.0-or-later
+ * SPDX-License-Identifier: LGPL-3.0-or-later
  */
 
-#pragma once
+#ifndef LINGLONG_DBUS_PROXY_SRC_FILTER_DBUS_FILTER_H
+#define LINGLONG_DBUS_PROXY_SRC_FILTER_DBUS_FILTER_H
 
 #include <QDebug>
 #include <QObject>
@@ -93,3 +90,4 @@ public:
      */
     void dumpConfig(QString &config);
 };
+#endif
