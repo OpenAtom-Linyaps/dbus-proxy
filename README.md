@@ -1,4 +1,4 @@
-## linglong-dbus-proxy
+# linglong-dbus-proxy
 
 linglong-dbus-proxy is a dbus proxy for linglong applications which run in the linglong-box.
 
@@ -20,18 +20,18 @@ linglong-dbus-proxy is a dbus proxy for linglong applications which run in the l
 
 2. Build:
 
-```bash
-mkdir build
-cd build
-cmake ..
-make
-```
+    ```bash
+    mkdir build
+    cd build
+    cmake ..
+    make
+    ```
 
 3. Install:
 
-```bash
-sudo make install
-```
+    ```bash
+    sudo make install
+    ```
 
 ## Getting help
 
